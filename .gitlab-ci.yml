@@ -1,0 +1,60 @@
+stages:
+  - test
+  - static-analysis
+  - build
+
+# Тестирование проекта
+test:
+  stage: test
+  image: golang:1.17
+  script:
+    - go test ./...
+  artifacts:
+    when: always
+    reports:
+      junit: test-results.xml
+    paths:
+      - test-results.xml
+
+# Статический анализ с использованием SonarQube
+static-analysis:
+  stage: static-analysis
+  image:
+    name: sonarsource/sonar-scanner-cli
+    entrypoint: [""]
+  variables:
+    SONAR_HOST_URL: "http://84.201.134.248:9000"
+    SONAR_LOGIN: "sqp_bf51d21b1c87ac727afeff9bf26d5cd3a3b2fa6b"  # Новый токен
+  script:
+    - sonar-scanner \
+        -Dsonar.projectKey=netology-gitlab \
+        -Dsonar.sources=. \
+        -Dsonar.host.url=$SONAR_HOST_URL \
+        -Dsonar.login=$SONAR_LOGIN
+
+# Сборка проекта в Docker (для ветки master)
+build:
+  stage: build
+  image: docker:latest
+  script:
+    - docker build -t myfirstproject .
+  only:
+    - master
+  artifacts:
+    when: always
+    paths:
+      - docker-build-output/
+
+# Ручной запуск сборки для не-master веток
+manual-build:
+  stage: build
+  image: docker:latest
+  when: manual
+  except:
+    - master
+  script:
+    - docker build -t myfirstproject .
+  artifacts:
+    when: always
+    paths:
+      - docker-build-output/
